@@ -1,15 +1,8 @@
-// php.js — The "Works Everywhere" Loader
-const phpScript = document.createElement('script');
-// Using a version and path known to contain the full build
-phpScript.src = 'https://unpkg.com/php-wasm@0.0.9/dist/php-wasm.js';
-
-phpScript.onload = async () => {
-    console.log("PHP-WASM Engine Loaded ✅");
-
-    // 1. Initialize the VM
-    // In this version, the class is usually available on the window
-    const php = new ArrayBuffer(0); // Placeholder
-    const instance = new window.PHP(); 
+// php.js — Loader for <php> tags using Sean Morris's php-wasm
+async function initPHP() {
+    // 1. Import the Web Runtime
+    const { PhpWeb } = await import('https://cdn.jsdelivr.net/npm/php-wasm/PhpWeb.mjs');
+    const php = new PhpWeb();
 
     const phpTags = document.querySelectorAll("php");
 
@@ -18,7 +11,7 @@ phpScript.onload = async () => {
 
         // 2. Build UI
         const pre = document.createElement('pre');
-        pre.style = "background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; margin-bottom: 0; font-size: 14px; overflow: auto;";
+        pre.style = "background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; margin-bottom: 0; font-size: 14px;";
         pre.textContent = `<?php\n${code}\n?>`;
 
         const resultLabel = document.createElement('div');
@@ -28,25 +21,25 @@ phpScript.onload = async () => {
         const outputDiv = document.createElement('div');
         outputDiv.style = "background: #eef; padding: 15px; border-left: 5px solid #007bff; font-family: monospace; white-space: pre-wrap; min-height: 1.5em; margin-bottom: 20px;";
 
-        // Clear and Inject
-        tag.style.display = 'block';
         tag.innerHTML = '';
+        tag.style.display = 'block';
         tag.appendChild(pre);
         tag.appendChild(resultLabel);
         tag.appendChild(outputDiv);
 
-        // 3. Execution Logic
-        try {
-            // Some versions of php-wasm use .run(), others use .exec()
-            // We'll capture the output which usually comes back as a string
-            const output = instance.run(`<?php ${code} ?>`);
-            outputDiv.textContent = output || "(No output)";
-        } catch (err) {
-            outputDiv.style.background = "#fee";
-            outputDiv.style.borderLeftColor = "#f00";
-            outputDiv.textContent = "PHP Error: " + err.message;
-        }
-    }
-};
+        // 3. Capture Output
+        // The Sean Morris build uses event listeners for STDOUT
+        php.addEventListener('output', (event) => {
+            outputDiv.textContent += event.detail;
+        });
 
-document.head.appendChild(phpScript);
+        // 4. Run the code once the WASM is ready
+        php.addEventListener('ready', () => {
+            // Ensure code is wrapped in PHP tags
+            const cleanCode = code.includes('<?php') ? code : `<?php ${code} ?>`;
+            php.run(cleanCode);
+        }, { once: true });
+    }
+}
+
+initPHP();
