@@ -1,15 +1,15 @@
-// php.js — Loader for <php> tags using Sean Morris's php-wasm
+// php.js — Loader for <php> tags using Sean Morris php-wasm
 async function initPHP() {
-    // 1. Import the Web Runtime
+    // Import the Web Runtime
     const { PhpWeb } = await import('https://cdn.jsdelivr.net/npm/php-wasm/PhpWeb.mjs');
-    const php = new PhpWeb();
 
     const phpTags = document.querySelectorAll("php");
 
-    for (let tag of phpTags) {
+    phpTags.forEach(tag => {
+        const php = new PhpWeb(); // New instance per block for isolation
         const code = tag.textContent.trim();
 
-        // 2. Build UI
+        // Build UI
         const pre = document.createElement('pre');
         pre.style = "background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; margin-bottom: 0; font-size: 14px;";
         pre.textContent = `<?php\n${code}\n?>`;
@@ -27,19 +27,17 @@ async function initPHP() {
         tag.appendChild(resultLabel);
         tag.appendChild(outputDiv);
 
-        // 3. Capture Output
-        // The Sean Morris build uses event listeners for STDOUT
+        // Capture Output
         php.addEventListener('output', (event) => {
             outputDiv.textContent += event.detail;
         });
 
-        // 4. Run the code once the WASM is ready
+        // Run code when WASM is ready
         php.addEventListener('ready', () => {
-            // Ensure code is wrapped in PHP tags
             const cleanCode = code.includes('<?php') ? code : `<?php ${code} ?>`;
             php.run(cleanCode);
         }, { once: true });
-    }
+    });
 }
 
 initPHP();
